@@ -26,3 +26,25 @@ export interface PluginInventoryEntry {
 export interface PluginInventorySnapshot {
   readonly entries: readonly PluginInventoryEntry[]
 }
+
+/** Failure codes for one rejected enablement write. */
+export type PluginInventorySetFailureCode =
+  /** The entry is no longer present in the Loader tree. */
+  | 'unknown-entry'
+  /** The entry is the bootstrap include, which owns the whole composition. */
+  | 'protected-entry'
+  /** The home patch layer could not be read. */
+  | 'patch-read-failed'
+  /** The home patch layer could not be written. */
+  | 'patch-write-failed'
+
+/** Detail of one rejected enablement write. */
+export interface PluginInventorySetFailure {
+  readonly code: PluginInventorySetFailureCode
+  readonly message: string
+}
+
+/** One plugin-entry enablement write outcome, returned by `pluginInventory.setEnabled`. */
+export type PluginInventorySetResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: PluginInventorySetFailure }

@@ -13,10 +13,14 @@ afterEach(cleanup)
 type Snapshot = Awaited<ReturnType<PluginInventorySettingsTabInjected['list']>>
 const t = ((key: PluginInventoryLocaleKey): string => en[key]) as PluginInventorySettingsTabProps['t']
 
-function props(list: PluginInventorySettingsTabInjected['list']): PluginInventorySettingsTabProps {
+function props(
+  list: PluginInventorySettingsTabInjected['list'],
+  setEnabled: PluginInventorySettingsTabInjected['setEnabled'] = vi.fn().mockResolvedValue({ ok: true }),
+): PluginInventorySettingsTabProps {
   return {
     t,
     list,
+    setEnabled,
   } as PluginInventorySettingsTabProps
 }
 
@@ -93,6 +97,42 @@ describe('PluginInventorySettingsTab', () => {
     fireEvent.change(search, { target: { value: 'not-a-plugin' } })
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
     expect(screen.getByText(en.emptySearch)).toBeTruthy()
+  })
+
+  it('toggles an entry through setEnabled and refreshes the inventory', async () => {
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>().mockResolvedValue({ ok: true })
+    const list = vi.fn().mockResolvedValue(SNAPSHOT)
+    render(<PluginInventorySettingsTab {...props(list, setEnabled)} />)
+    const toggle = await screen.findByRole('switch', { name: 'hmr, Disable' })
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+
+    fireEvent.click(toggle)
+    await waitFor(() => { expect(setEnabled).toHaveBeenCalledWith('8a1b2c3d', false) })
+    await waitFor(() => { expect(list).toHaveBeenCalledTimes(2) })
+  })
+
+  it('turns a disabled entry back on through setEnabled', async () => {
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>().mockResolvedValue({ ok: true })
+    const list = vi.fn().mockResolvedValue(SNAPSHOT)
+    render(<PluginInventorySettingsTab {...props(list, setEnabled)} />)
+    const toggle = await screen.findByRole('switch', { name: 'directory-picker-native, Enable' })
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+
+    fireEvent.click(toggle)
+    await waitFor(() => { expect(setEnabled).toHaveBeenCalledWith('disabled-entry', true) })
+  })
+
+  it('keeps the row state and reports a rejected toggle', async () => {
+    const setEnabled = vi.fn<PluginInventorySettingsTabInjected['setEnabled']>()
+      .mockResolvedValue({ ok: false, error: { code: 'patch-write-failed', message: 'boom' } })
+    const list = vi.fn().mockResolvedValue(SNAPSHOT)
+    render(<PluginInventorySettingsTab {...props(list, setEnabled)} />)
+    const toggle = await screen.findByRole('switch', { name: 'hmr, Disable' })
+
+    fireEvent.click(toggle)
+    expect((await screen.findByRole('alert')).textContent).toBe(en.toggleFailed)
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    expect(list).toHaveBeenCalledTimes(1)
   })
 
   it('shows a generic failure and retries into the empty state', async () => {

@@ -11,7 +11,7 @@ export type { PluginInventoryLocaleKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** Read-only Host plugin inventory copy. */
+    /** Host plugin inventory copy. */
     'settings.pluginInventory': PluginInventoryLocaleKey
   }
 }
@@ -34,7 +34,14 @@ export function apply(ctx: ClientContext): void {
     }
     return result.value
   }
-  const injected = (): PluginInventorySettingsTabInjected => ({ list })
+  const setEnabled: PluginInventorySettingsTabInjected['setEnabled'] = async (entryId, enabled) => {
+    const result = await ctx.remote.pluginInventory.setEnabled(entryId, enabled)
+    if (!result.ok) {
+      throw new Error(`pluginInventory.setEnabled failed: ${result.error.code}: ${result.error.message}`)
+    }
+    return result.value
+  }
+  const injected = (): PluginInventorySettingsTabInjected => ({ list, setEnabled })
 
   ctx.slots.inject('settings.plugins.tab', () => ctx.slots.register({
     name: 'settings.plugins.tab',

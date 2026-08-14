@@ -6,6 +6,7 @@ import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-runtime/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import { usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
+import type { PluginEntryId, PluginInventorySetResult } from '@deepseek-ai/dsh-api-remotes/client'
 import { apply, inject, NS } from '../src/client/index.ts'
 import { PluginInventorySettingsTab } from '../src/client/PluginInventorySettingsTab.tsx'
 import type { PluginInventorySettingsTabInjected } from '../src/client/PluginInventorySettingsTab.tsx'
@@ -16,6 +17,9 @@ afterEach(cleanup)
 const EMPTY = { entries: [] }
 type ListResult =
   | { readonly ok: true; readonly value: typeof EMPTY }
+  | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
+type SetRemoteResult =
+  | { readonly ok: true; readonly value: PluginInventorySetResult }
   | { readonly ok: false; readonly error: { readonly code: string; readonly message: string } }
 
 async function bench() {
@@ -31,8 +35,10 @@ async function bench() {
   new RemoteService(ctx)
   const list = vi.fn<() => Promise<ListResult>>()
     .mockResolvedValue({ ok: true, value: EMPTY })
-  ctx.provide('remote.pluginInventory', { list })
-  return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list }
+  const setEnabled = vi.fn<() => Promise<SetRemoteResult>>()
+    .mockResolvedValue({ ok: true, value: { ok: true } })
+  ctx.provide('remote.pluginInventory', { list, setEnabled })
+  return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, list, setEnabled }
 }
 
 function declare(slots: SlotRegistry): () => void {
@@ -64,6 +70,12 @@ describe('ui-settings-plugin-inventory browser plugin', () => {
     expect(b.list).toHaveBeenCalledOnce()
     b.list.mockResolvedValueOnce({ ok: false, error: { code: 'REMOTE_ERROR', message: 'unavailable' } })
     await expect(injected.list()).rejects.toThrow('pluginInventory.list failed: REMOTE_ERROR: unavailable')
+
+    await expect(injected.setEnabled('entry-1' as PluginEntryId, false)).resolves.toEqual({ ok: true })
+    expect(b.setEnabled).toHaveBeenCalledWith('entry-1', false)
+    b.setEnabled.mockResolvedValueOnce({ ok: false, error: { code: 'REMOTE_ERROR', message: 'unavailable' } })
+    await expect(injected.setEnabled('entry-1' as PluginEntryId, false)).rejects
+      .toThrow('pluginInventory.setEnabled failed: REMOTE_ERROR: unavailable')
     await b.ctx.fiber.dispose()
   })
 

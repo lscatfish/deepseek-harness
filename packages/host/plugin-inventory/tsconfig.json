@@ -15,7 +15,19 @@
       "path": "../../../vendor/loader"
     },
     {
+      "path": "../../../vendor/include"
+    },
+    {
       "path": "../../util/brand"
+    },
+    {
+      "path": "../../util/atomic-write"
+    },
+    {
+      "path": "../../util/home-paths"
+    },
+    {
+      "path": "../../boot/app-boot"
     },
     {
       "path": "../../typert/protocol"

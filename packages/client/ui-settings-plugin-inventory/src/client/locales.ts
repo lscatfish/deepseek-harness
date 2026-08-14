@@ -20,6 +20,9 @@ export const zh = {
   active: '已挂载',
   failed: '挂载失败',
   unloading: '卸载中',
+  turnOn: '启用',
+  turnOff: '禁用',
+  toggleFailed: '切换失败，请重试。',
 } satisfies Record<string, string>
 
 /** Plugin inventory locale key union. */
@@ -45,4 +48,7 @@ export const en = {
   active: 'Mounted',
   failed: 'Mount failed',
   unloading: 'Unloading',
+  turnOn: 'Enable',
+  turnOff: 'Disable',
+  toggleFailed: 'Switch failed, please retry.',
 } satisfies Record<PluginInventoryLocaleKey, string>
