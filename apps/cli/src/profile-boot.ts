@@ -260,7 +260,12 @@ export async function runProfile(options: RunProfileOptions): Promise<{ ctx: Con
   )
 
   const packaged = (process as NodeJS.Process & { pkg?: unknown }).pkg !== undefined
-  const resolutionMode = packaged ? 'runtime' : options.resolutionMode ?? 'runtime'
+  // Source launches run under tsx, which re-projects workspace specifiers to src through
+  // tsconfig paths; runtime resolution would then mount plugins from lib and split a package
+  // across two module instances (dsh-tools' private scheduler symbol). Disk links keep the
+  // plugin graph on the single src plane tsx owns; built launches run plain Node on lib.
+  const defaultResolutionMode: ProfileResolutionMode = import.meta.url.endsWith('.ts') ? 'link' : 'runtime'
+  const resolutionMode = packaged ? 'runtime' : options.resolutionMode ?? defaultResolutionMode
   const app: { current?: Context } = {}
   let disposal: Promise<void> | undefined
   const dispose = (): Promise<void> => disposal ??= (async () => {
